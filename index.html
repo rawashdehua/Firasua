@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>تواصل مباشر</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- شاشة الدخول -->
+<section id="lock" class="screen">
+  <div class="card">
+    <img src="icon-192.png" alt="" class="logo">
+    <h1>تواصل مباشر</h1>
+    <p class="sub">اتصال مباشر بين الأجهزة بدون حسابات</p>
+    <label for="inName">اسم هذا الجهاز</label>
+    <input id="inName" maxlength="24" autocomplete="off" placeholder="مثال: جوال فراس">
+    <label for="inCode">كود الغرفة</label>
+    <input id="inCode" type="password" inputmode="numeric" autocomplete="off" placeholder="••••••••">
+    <button id="btnJoin" class="primary">اتصال</button>
+    <p id="lockErr" class="err" hidden></p>
+    <button id="btnInstall" class="ghost" hidden>تثبيت التطبيق على الجهاز</button>
+    <p class="hint" id="iosHint" hidden>للتثبيت على آيفون: زر المشاركة ← «إضافة إلى الشاشة الرئيسية»</p>
+  </div>
+</section>
+
+<!-- التطبيق -->
+<section id="app" class="screen" hidden>
+  <header>
+    <div class="h-main">
+      <b id="roomTitle">الغرفة</b>
+      <span id="netState" class="state off">غير متصل</span>
+    </div>
+    <button id="btnMenu" class="icon" aria-label="القائمة">⋮</button>
+  </header>
+
+  <nav id="chips" aria-label="المحادثات"></nav>
+
+  <main id="list" aria-live="polite"></main>
+
+  <form id="composer" autocomplete="off">
+    <textarea id="inText" rows="1" maxlength="4000" placeholder="اكتب رسالة…"></textarea>
+    <button type="submit" class="send" aria-label="إرسال">➤</button>
+  </form>
+</section>
+
+<!-- القائمة -->
+<div id="sheet" class="sheet" hidden>
+  <div class="sheet-body">
+    <div class="sheet-head"><b>الإعدادات</b><button id="btnCloseSheet" class="icon">✕</button></div>
+
+    <label for="setName">اسم هذا الجهاز</label>
+    <div class="row">
+      <input id="setName" maxlength="24">
+      <button id="btnSaveName" class="small">حفظ</button>
+    </div>
+
+    <div class="row between">
+      <div><b>قفل الغرفة</b><div class="muted">رفض أي جهاز جديد لم يتصل من قبل</div></div>
+      <label class="switch"><input type="checkbox" id="swLock"><span></span></label>
+    </div>
+
+    <div class="row between">
+      <div><b>الإشعارات</b><div class="muted">تنبيه عند وصول رسالة والتطبيق في الخلفية</div></div>
+      <button id="btnNotif" class="small">تفعيل</button>
+    </div>
+
+    <b class="sec">الأجهزة المعروفة</b>
+    <ul id="contactList" class="contacts"></ul>
+
+    <div class="row">
+      <button id="btnExport" class="small">نسخة احتياطية</button>
+      <button id="btnLeave" class="small danger">خروج ونسيان الكود</button>
+    </div>
+    <p class="muted" id="myId"></p>
+  </div>
+</div>
+
+<div id="toast" class="toast" hidden></div>
+
+<script src="store.js"></script>
+<script src="net.js"></script>
+<script src="ui.js"></script>
+</body>
+</html>

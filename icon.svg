@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#f8e8b8"/><stop offset="0.5" stop-color="#cfa84d"/><stop offset="1" stop-color="#8c6620"/>
+    </linearGradient>
+    <radialGradient id="bg" cx="0.5" cy="0.38" r="0.85">
+      <stop offset="0" stop-color="#2d3548"/><stop offset="1" stop-color="#151925"/>
+    </radialGradient>
+  </defs>
+  <rect width="512" height="512" fill="url(#bg)"/>
+
+  <!-- double ring + four diamonds (kept inside the maskable safe zone) -->
+  <circle cx="256" cy="256" r="184" fill="none" stroke="url(#g)" stroke-width="5"/>
+  <circle cx="256" cy="256" r="171" fill="none" stroke="url(#g)" stroke-width="1.5" opacity="0.75"/>
+  <g fill="url(#g)">
+    <path d="M256 73 l11 11 -11 11 -11 -11z"/>
+    <path d="M256 417 l11 11 -11 11 -11 -11z"/>
+    <path d="M73 256 l11 -11 11 11 -11 11z"/>
+    <path d="M417 256 l11 -11 11 11 -11 11z"/>
+  </g>
+
+  <!-- ornate serif E: shadow, body, highlight -->
+  <g transform="translate(-2 -4)">
+    <path id="e" d="M176 156 H332 Q346 156 346 172 V216 C340 196 324 184 300 184 H232 V236 H286 Q304 236 308 220 V282 Q304 268 286 266 H232 V328 H304 C330 326 344 312 348 290 V340 Q348 356 330 356 H176 V344 H196 Q200 344 200 332 V180 Q200 168 188 168 H176 Z"
+          fill="#000" opacity="0.35" transform="translate(4 5)"/>
+    <path d="M176 156 H332 Q346 156 346 172 V216 C340 196 324 184 300 184 H232 V236 H286 Q304 236 308 220 V282 Q304 268 286 266 H232 V328 H304 C330 326 344 312 348 290 V340 Q348 356 330 356 H176 V344 H196 Q200 344 200 332 V180 Q200 168 188 168 H176 Z"
+          fill="url(#g)"/>
+    <path d="M214 176 V336" stroke="#fff" stroke-opacity="0.35" stroke-width="2.5" fill="none"/>
+  </g>
+
+  <!-- swash under the E and a small fleuron above -->
+  <path d="M190 394 Q256 416 322 394" fill="none" stroke="url(#g)" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="186" cy="393" r="4" fill="url(#g)"/><circle cx="326" cy="393" r="4" fill="url(#g)"/>
+  <circle cx="256" cy="405" r="3" fill="url(#g)"/>
+  <path d="M256 118 l7 8 -7 8 -7 -8z" fill="url(#g)"/>
+  <path d="M232 126 H246 M266 126 H280" stroke="url(#g)" stroke-width="2" stroke-linecap="round"/>
+</svg>
