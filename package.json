@@ -1,1 +1,0 @@
-{ "name": "tawasol-relay", "version": "7.0.0", "private": true, "scripts": { "start": "node relay-server.js" }, "engines": { "node": ">=18" } }
