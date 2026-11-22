@@ -244,6 +244,7 @@
   N.on('ack', refresh);
   N.on('upd', refresh);
   N.on('typing', ({ id, name, group }) => { S.typing[id] = { name, group, until: Date.now() + 4000 }; schedule(); setTimeout(schedule, 4100); });
+  N.on('dup', m => { if (m.room === N.rid && !m.deleted && !m.purged && !S.msgs.some(x => x.id === m.id)) { S.msgs.push(m); schedule(); } });
   N.on('msg', m => {
     S.msgs.push(m);
     if (m.from !== me.id && !m.deleted) {

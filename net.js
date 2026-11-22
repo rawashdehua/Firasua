@@ -288,6 +288,7 @@
         else { ex.text = m.text; ex.edited = Number(m.edited) || Date.now(); ex.readSeen = 0; ex.readNotified = 0; }
         await PC.putMsg(ex); emit('upd', ex);
       }
+      emit('dup', ex);                              // نافذة ثانية بنفس المتصفح تشارك قاعدة البيانات: قد لا تعرضها بعد
       return ex.rev || 0;
     }
     const k = N.contacts.get(fromId);
