@@ -1,7 +1,7 @@
 'use strict';
 /* يخزّن ملفات التطبيق ومكتبة PeerJS ليعمل التطبيق وتفتح واجهته بدون إنترنت */
-const CACHE = 'tawasol-v5';
-const SHELL = ['./', 'index.html', 'style.css', 'store.js', 'net.js', 'relay.js', 'ui.js', 'manifest.json', 'icon-192.png', 'icon-512.png'];
+const CACHE = 'tawasol-v15';
+const SHELL = ['./', 'index.html', 'style.css', 'store.js', 'net.js', 'room.js', 'relay.js', 'voice.js', 'ui-voice.js', 'ui-core.js', 'ui-lock.js', 'ui-chat.js', 'ui-settings.js', 'ui-boot.js', 'manifest.json', 'icon-192.png', 'icon-512.png'];
 const LIB = /peerjs(\.min)?\.js(\?.*)?$/;
 
 self.addEventListener('install', e => {
@@ -27,6 +27,16 @@ self.addEventListener('fetch', e => {
       return hit || net;
     })
   );
+});
+
+/* إشعار دفع فارغ المحتوى من خادم الاحتفاظ: نعرض تنبيهاً عاماً إلا إن كان التطبيق ظاهراً أمام المستخدم */
+self.addEventListener('push', e => {
+  e.waitUntil(self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(cs => {
+    if (cs.some(c => c.visibilityState === 'visible')) return;
+    return self.registration.showNotification('رسالة جديدة', {
+      body: 'افتح التطبيق لقراءتها', tag: 'pc-push', renotify: true, icon: 'icon-192.png', badge: 'icon-192.png', lang: 'ar', dir: 'rtl'
+    });
+  }));
 });
 
 self.addEventListener('notificationclick', e => {

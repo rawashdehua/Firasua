@@ -26,16 +26,18 @@ PC.PEER_CFG = PC.TURN.length
   ? { iceServers: [{ urls: 'stun:stun.l.google.com:19302' }, ...PC.TURN], iceCandidatePoolSize: 4 }
   : undefined;
 
-/* خادم الاحتفاظ بالرسائل (اختياري، معطّل ما دام url فارغاً). انظر README.txt.
-   token = نفس قيمة RELAY_TOKEN على الخادم · secret = سرّ تشفير الرسائل قبل رفعها.
-   انتبه: القيمتان تظهران لمن يملك ملفات التطبيق، فاحتفظ بالتطبيق لأجهزتك فقط. */
+/* خادم الاحتفاظ بالرسائل (Cloudflare Worker من مجلد cloudflare). يعمل تلقائياً: الرمز والسرّ يُشتقّان من كود الغرفة.
+   url: ضع رابط الـ Worker هنا (https://tawasol-relay.اسمك.workers.dev) ليعمل على كل الأجهزة، أو افتح التطبيق مرة بالرابط
+   index.html?relay=https://... فيُحفظ تلقائياً، أو الصقه في الإعدادات. اتركه فارغاً لتعطيل الخادم.
+   token/secret: اتركهما فارغين (تلقائي). ضعهما فقط إن ضبطت RELAY_TOKEN على الخادم، أو للدخول التلقائي AUTO_ROOM بلا كود. */
 PC.RELAY = {
-  url: '',                                   // مثال: 'https://my-relay.onrender.com'
-  token: 'kFql7qZyWXuYhdWlsy3Snw6a',
-  secret: '7CgZPP8UqLQdMkXMu9hyUGXHVN24lCiR',
+  url: '',
+  token: '',
+  secret: '',
   pollMs: 15000
 };
 PC.MAX_TEXT = 4000;
+PC.MAX_FILE = 1000000;          // أقصى حجم لملف/صورة (بايت) بعد الضغط؛ يُرسل مباشرة بين الأجهزة فقط
 
 /* مكتبة PeerJS: نجرّب نسخة محلية أولاً (peerjs.min.js بجانب الملفات) ثم شبكتي توزيع */
 PC.PEER_SRC = [
@@ -80,15 +82,109 @@ PC.tx = (store, mode, fn) => new Promise((res, rej) => {
   t.onerror = t.onabort = () => rej(t.error);
 });
 
-PC.putMsg = m => PC.tx('msgs', 'readwrite', s => s.put(m));
-PC.getMsg = id => new Promise((res, rej) => {
-  const rq = PC.db.transaction('msgs').objectStore('msgs').get(id);
-  rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error);
-});
-PC.roomMsgs = room => new Promise((res, rej) => {
-  const rq = PC.db.transaction('msgs').objectStore('msgs').index('room').getAll(room);
-  rq.onsuccess = () => res(rq.result.sort((a, b) => a.ts - b.ts)); rq.onerror = () => rej(rq.error);
-});
+/* ---- قفل التطبيق وتشفير المحادثات المحلية ----
+   الرمز → PBKDF2 (200 ألف دورة) → مفتاح AES-GCM. يُشفَّر كل حقل في الرسالة عدا (id, room, ts) اللازمة للفهرسة.
+   الرمز لا يُخزَّن، ويُخزَّن فقط ملح وبصمة تحقق مشفّرة. أسماء الأجهزة المعروفة غير مشفّرة. */
+const V = PC.vault = { key: null, gate: Promise.resolve() };
+{
+  const ITER = 200000, te = new TextEncoder(), td = new TextDecoder();
+  const b64 = u8 => { let t = ''; for (let i = 0; i < u8.length; i += 0x8000) t += String.fromCharCode.apply(null, u8.subarray(i, i + 0x8000)); return btoa(t); };
+  const unb64 = t => Uint8Array.from(atob(t), c => c.charCodeAt(0));
+  V.enabled = () => PC.ls.get('vault') === '1';
+  const derive = async (pass, salt) => {
+    const base = await crypto.subtle.importKey('raw', te.encode(pass), 'PBKDF2', false, ['deriveKey']);
+    return crypto.subtle.deriveKey({ name: 'PBKDF2', salt, iterations: ITER, hash: 'SHA-256' }, base, { name: 'AES-GCM', length: 256 }, false, ['encrypt', 'decrypt']);
+  };
+  const encWith = async (key, obj) => {
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const ct = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, te.encode(JSON.stringify(obj))));
+    const o = new Uint8Array(12 + ct.length); o.set(iv); o.set(ct, 12); return b64(o);
+  };
+  const decWith = async (key, t) => {
+    try { const u = unb64(t); return JSON.parse(td.decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: u.subarray(0, 12) }, key, u.subarray(12)))); } catch { return null; }
+  };
+  /* يعيد المفتاح إن صحّ الرمز، وإلا false */
+  V.verify = async pass => {
+    if (!V.enabled()) return false;
+    try { const k = await derive(pass, unb64(PC.ls.get('vsalt'))); return (await decWith(k, PC.ls.get('vchk'))) === 'ok' ? k : false; } catch { return false; }
+  };
+  V.unlock = async pass => { const k = await V.verify(pass); if (!k) return false; V.key = k; return true; };
+
+  const PLAIN = ['id', 'room', 'ts'];
+  const seal = async m => {
+    if (V.enabled() && !V.key) throw new Error('locked');
+    if (!V.key) return m;
+    const rest = {}; for (const k in m) if (!PLAIN.includes(k)) rest[k] = m[k];
+    return { id: m.id, room: m.room, ts: m.ts, enc: await encWith(V.key, rest) };
+  };
+  const unseal = async r => {
+    if (!r || !r.enc) return r;
+    if (!V.key) return null;
+    const rest = await decWith(V.key, r.enc);
+    return rest ? { id: r.id, room: r.room, ts: r.ts, ...rest } : null;
+  };
+
+  /* تحويل كل الرسائل بين مفتاحين (null = بلا تشفير) داخل معاملة واحدة، مع إيقاف القراءة والكتابة مؤقتاً */
+  async function reencrypt(oldKey, newKey, commit) {
+    let release; const prev = V.gate; V.gate = new Promise(r => (release = r));
+    try {
+      await prev;
+      const raws = await new Promise((res, rej) => { const rq = PC.db.transaction('msgs').objectStore('msgs').getAll(); rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error); });
+      const out = [];
+      for (const r of raws) {
+        let m = r;
+        if (r.enc) { const rest = await decWith(oldKey, r.enc); if (!rest) throw new Error('decrypt'); m = { id: r.id, room: r.room, ts: r.ts, ...rest }; }
+        if (newKey) { const rest = {}; for (const k in m) if (!PLAIN.includes(k)) rest[k] = m[k]; out.push({ id: m.id, room: m.room, ts: m.ts, enc: await encWith(newKey, rest) }); }
+        else out.push(m);
+      }
+      await PC.tx('msgs', 'readwrite', st => { out.forEach(x => st.put(x)); });
+      commit();
+    } finally { release(); }
+  }
+
+  V.setup = async pass => {
+    const salt = crypto.getRandomValues(new Uint8Array(16)), k = await derive(pass, salt), chk = await encWith(k, 'ok');
+    await reencrypt(null, k, () => { PC.ls.set('vsalt', b64(salt)); PC.ls.set('vchk', chk); PC.ls.set('vault', '1'); V.key = k; });
+  };
+  V.change = async (oldPass, newPass) => {
+    const ok = await V.verify(oldPass); if (!ok) return false;
+    const salt = crypto.getRandomValues(new Uint8Array(16)), k = await derive(newPass, salt), chk = await encWith(k, 'ok');
+    await reencrypt(ok, k, () => { PC.ls.set('vsalt', b64(salt)); PC.ls.set('vchk', chk); V.key = k; });
+    return true;
+  };
+  V.remove = async pass => {
+    const ok = await V.verify(pass); if (!ok) return false;
+    await reencrypt(ok, null, () => { PC.ls.del('vault'); PC.ls.del('vsalt'); PC.ls.del('vchk'); V.key = null; });
+    return true;
+  };
+  /* نسيان الرمز: لا استرجاع، نمسح بيانات هذا الجهاز كاملة */
+  V.wipeAll = () => new Promise(res => {
+    try { PC.db && PC.db.close(); } catch {}
+    const done = () => {
+      try { Object.keys(localStorage).filter(k => k.startsWith('pc_')).forEach(k => localStorage.removeItem(k)); sessionStorage.clear(); } catch {}
+      res();
+    };
+    try { const rq = indexedDB.deleteDatabase('pchat1'); rq.onsuccess = rq.onerror = rq.onblocked = done; } catch { done(); }
+  });
+
+  PC.putMsg = async m => { await V.gate; const rec = await seal(m); return PC.tx('msgs', 'readwrite', st => st.put(rec)); };
+  PC.getMsg = async id => {
+    await V.gate;
+    const raw = await new Promise((res, rej) => { const rq = PC.db.transaction('msgs').objectStore('msgs').get(id); rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error); });
+    return unseal(raw);
+  };
+  PC.roomMsgs = async room => {
+    await V.gate;
+    const raws = await new Promise((res, rej) => { const rq = PC.db.transaction('msgs').objectStore('msgs').index('room').getAll(room); rq.onsuccess = () => res(rq.result); rq.onerror = () => rej(rq.error); });
+    return (await Promise.all(raws.map(unseal))).filter(Boolean).sort((a, b) => a.ts - b.ts);
+  };
+}
+PC.delMsgs = ids => PC.tx('msgs', 'readwrite', s => { ids.forEach(id => s.delete(id)); });
+/* نسيان غرفة مضافة: حذف رسائلها وأجهزتها المعروفة من هذا الجهاز */
+PC.delRoom = async room => {
+  const ids = (await PC.roomMsgs(room)).map(m => m.id); if (ids.length) await PC.delMsgs(ids);
+  for (const c of await PC.roomContacts(room)) await PC.delContact(c.key);
+};
 PC.putContact = c => PC.tx('contacts', 'readwrite', s => s.put(c));
 PC.delContact = key => PC.tx('contacts', 'readwrite', s => s.delete(key));
 PC.roomContacts = room => new Promise((res, rej) => {
