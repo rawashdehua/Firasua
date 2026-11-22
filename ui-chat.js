@@ -15,7 +15,7 @@
     if (N.libFail) { txt = 'تعذّر تحميل مكتبة الاتصال — تحقق من الإنترنت'; cls = 'off'; }
     else if (N.netDown) { txt = 'لا يوجد اتصال بالإنترنت — تُحفظ رسائلك وتُرسل عند عودته'; cls = 'off'; }
     else if (!N.libOk) { txt = 'جارٍ تحميل مكتبة الاتصال…'; }
-    else if (!N.serverOk) { txt = N.fails >= 2 ? 'تعذّر الوصول لخادم الاتصال (محاولة ' + N.fails + ') — اضغط لإعادة المحاولة' : 'جارٍ الاتصال بالخادم…'; if (N.fails >= 2) cls = 'off'; }
+    else if (!N.serverOk) { txt = N.fails >= 2 ? ({ 'unavailable-id': 'هذا الجهاز مسجّل في نافذة أخرى مفتوحة (محاولة ' + N.fails + ') — أغلق النوافذ الأخرى', timeout: 'الخادم لا يستجيب (محاولة ' + N.fails + ') — جرّب شبكة أخرى', network: 'لا اتصال بالخادم (محاولة ' + N.fails + ')', 'server-error': 'خطأ من الخادم (محاولة ' + N.fails + ')' }[N.lastErr] || 'تعذّر الوصول لخادم الاتصال (محاولة ' + N.fails + ') — اضغط لإعادة المحاولة') : 'جارٍ الاتصال بالخادم…'; if (N.fails >= 2) cls = 'off'; }
     else if (N.conns.size === 0) { txt = 'جاهز — بانتظار الطرف الآخر'; }
     else { txt = 'متصل مع: ' + N.onlineList().map(x => x.name).join('، '); cls = 'on'; }
     const nowT = Date.now();

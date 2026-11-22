@@ -90,7 +90,8 @@
     N.serverOk = false; emit('status'); emit('presence');
     const p = new Peer(mainId(N.me.id), { debug: 0, config: PC.PEER_CFG });
     N.peer = p;
-    p.on('open', () => { N.serverOk = true; N.fails = 0; emit('status'); claimBeacon(); discover(); connectKnown(); });
+    const wd = setTimeout(() => { if (N.peer === p && !N.serverOk && !N.stopped) { N.fails++; N.lastErr = 'timeout'; emit('status'); restartSoon(Math.min(60000, 4000 * 2 ** Math.min(N.fails - 1, 4))); } }, 12000);   // لا استجابة من الخادم
+    p.on('open', () => { clearTimeout(wd); N.lastErr = ''; N.serverOk = true; N.fails = 0; emit('status'); claimBeacon(); discover(); connectKnown(); });
     p.on('connection', c => onConn(c, false));
     p.on('call', c => { if (N.voiceIn) N.voiceIn(c); else { try { c.close(); } catch {} } });   // مكالمة صوتية مباشرة (زر التحدث)
     p.on('disconnected', () => {
@@ -99,7 +100,8 @@
     });
     p.on('error', e => {
       if (e.type === 'peer-unavailable') return;           // جهاز غير متصل الآن: طبيعي
-      if (e.type === 'unavailable-id') return restartSoon(4000); // الجلسة السابقة ما زالت مسجّلة
+      clearTimeout(wd); N.lastErr = e.type || 'error';
+      if (e.type === 'unavailable-id') { N.fails++; emit('status'); return restartSoon(4000); } // الجلسة السابقة ما زالت مسجّلة
       N.serverOk = false; N.fails++; emit('status'); restartSoon(Math.min(60000, 4000 * 2 ** Math.min(N.fails - 1, 4)));   // 4s ثم 8 ثم 16 ثم 32 ثم 60
     });
   }
