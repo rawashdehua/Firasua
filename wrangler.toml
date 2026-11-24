@@ -1,0 +1,20 @@
+# خادم حفظ الرسائل على Cloudflare Workers (مجاني، لا ينام، تخزين دائم عبر Durable Objects)
+name = "tawasol-relay"
+main = "worker.js"
+compatibility_date = "2025-01-01"
+
+[vars]
+VAPID_SUBJECT = "mailto:admin@example.com"   # غيّره إلى بريدك (مطلوب لإشعارات الخلفية)
+
+[[durable_objects.bindings]]
+name = "ROOMS"
+class_name = "Room"
+
+[[durable_objects.bindings]]
+name = "META"
+class_name = "Meta"
+
+# الخطة المجانية تتطلب Durable Objects المبنية على SQLite
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["Room", "Meta"]
