@@ -7,7 +7,7 @@
   const schedule = (...a) => U.schedule(...a);
   const muted = () => PC.room.mutedFor(me.id);
   const fmt = s => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
-  const micError = err => toast(err && err.name === 'Muted' ? 'المضيف كتم الصوت للجميع' : err && err.name === 'NotAllowedError' ? 'اسمح باستخدام الميكروفون من إعدادات المتصفح' : 'تعذّر تشغيل الميكروفون');
+  const micError = err => toast(err && err.name === 'InCall' ? 'أنت في مكالمة الآن' : err && err.name === 'Muted' ? 'المضيف كتم الصوت للجميع' : err && err.name === 'NotAllowedError' ? 'اسمح باستخدام الميكروفون من إعدادات المتصفح' : 'تعذّر تشغيل الميكروفون');
 
   function renderVoiceBtns() {
     const ok = V.supported(), m = muted();
@@ -39,6 +39,7 @@
   btn.addEventListener('pointerdown', async e => {
     e.preventDefault(); if (pressing) return;
     if (muted()) return toast('المضيف كتم الصوت للجميع');
+    if (PC.call.cur) return toast('أنت في مكالمة الآن');
     pressing = true; pressAt = Date.now();
     try { btn.setPointerCapture(e.pointerId); } catch {}
     try {

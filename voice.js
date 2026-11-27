@@ -87,6 +87,7 @@
   V.talking = false;
   V.talkStart = async to => {
     if (V.talking) return;
+    if (PC.call && PC.call.cur) throw Object.assign(new Error('incall'), { name: 'InCall' });
     if (PC.room && PC.room.mutedFor(N.me.id)) throw Object.assign(new Error('muted'), { name: 'Muted' });
     const s = await getMic();
     V.talking = true;

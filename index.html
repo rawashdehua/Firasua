@@ -65,7 +65,7 @@
       <b id="roomTitle">الغرفة</b>
       <span id="netState" class="state off">غير متصل</span>
     </div>
-    <div class="hb"><button id="btnSpk" class="icon" aria-label="كتم صوت التحدث المباشر">🎧</button><button id="btnPtt" class="icon ptt" aria-label="اضغط مطولاً للتحدث">🎙</button><button id="btnSearch" class="icon" aria-label="بحث">🔍</button><button id="btnMenu" class="icon" aria-label="القائمة">⋮</button></div>
+    <div class="hb"><button id="btnSpk" class="icon" aria-label="كتم صوت التحدث المباشر">🎧</button><button id="btnPtt" class="icon ptt" aria-label="اضغط مطولاً للتحدث">🎙</button><button id="btnCall" class="icon" aria-label="مكالمة">📞</button><button id="btnSearch" class="icon" aria-label="بحث">🔍</button><button id="btnMenu" class="icon" aria-label="القائمة">⋮</button></div>
   </header>
 
   <nav id="chips" aria-label="المحادثات"></nav>
@@ -211,15 +211,26 @@
 
 <div id="toast" class="toast" hidden></div>
 
+
+  <div id="callPick" class="callpick" hidden><div class="cpbox"><h3>اتصال بـ…</h3><ul id="cpList"></ul><button type="button" id="cpClose" class="small">إلغاء</button></div></div>
+  <div id="callBox" class="callbox" hidden>
+    <video id="callRemote" autoplay playsinline></video>
+    <video id="callLocal" autoplay playsinline muted></video>
+    <div class="cinfo"><b id="callName"></b><span id="callStat"></span></div>
+    <div class="cbtns" id="cbIn"><button type="button" id="cDecline" class="cb red" aria-label="رفض">✕</button><button type="button" id="cAccept" class="cb green" aria-label="قبول">📞</button></div>
+    <div class="cbtns" id="cbLive"><button type="button" id="cMic" class="cb" aria-label="كتم الميكروفون">🎙</button><button type="button" id="cCam" class="cb" aria-label="الكاميرا">📷</button><button type="button" id="cFlip" class="cb" aria-label="تبديل الكاميرا">🔄</button><button type="button" id="cEnd" class="cb red" aria-label="إنهاء">✕</button></div>
+  </div>
 <script src="store.js"></script>
 <script src="net.js"></script>
 <script src="room.js"></script>
 <script src="relay.js"></script>
 <script src="voice.js"></script>
+<script src="call.js"></script>
 <script src="ui-core.js"></script>
 <script src="ui-lock.js"></script>
 <script src="ui-chat.js"></script>
 <script src="ui-voice.js"></script>
+<script src="ui-call.js"></script>
 <script src="ui-settings.js"></script>
 <script src="ui-boot.js"></script>
 </body>

@@ -1,7 +1,7 @@
 'use strict';
 /* يخزّن ملفات التطبيق ومكتبة PeerJS ليعمل التطبيق وتفتح واجهته بدون إنترنت */
-const CACHE = 'tawasol-v17';
-const SHELL = ['./', 'index.html', 'style.css', 'store.js', 'net.js', 'room.js', 'relay.js', 'voice.js', 'ui-voice.js', 'ui-core.js', 'ui-lock.js', 'ui-chat.js', 'ui-settings.js', 'ui-boot.js', 'manifest.json', 'icon-192.png', 'icon-512.png'];
+const CACHE = 'tawasol-v20';
+const SHELL = ['./', 'index.html', 'style.css', 'store.js', 'net.js', 'room.js', 'relay.js', 'voice.js', 'call.js', 'ui-voice.js', 'ui-call.js', 'ui-core.js', 'ui-lock.js', 'ui-chat.js', 'ui-settings.js', 'ui-boot.js', 'manifest.json', 'icon-192.png', 'icon-512.png'];
 const LIB = /peerjs(\.min)?\.js(\?.*)?$/;
 
 self.addEventListener('install', e => {

@@ -16,8 +16,15 @@
   /* ---- القائمة ---- */
   function renderContacts() {
     const ul = $('contactList'); ul.textContent = '';
+    [...N.pending.values()].forEach(p => {
+      const li = document.createElement('li'); li.className = 'pend';
+      const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = p.name || 'جهاز';
+      const sm = document.createElement('small'); sm.textContent = 'طلب انضمام — الغرفة مقفلة'; nm.appendChild(sm); li.appendChild(nm);
+      const b = document.createElement('button'); b.className = 'small'; b.textContent = 'سماح'; b.onclick = () => N.allow(p.id); li.appendChild(b);
+      ul.appendChild(li);
+    });
     const all = [...N.contacts.values()];
-    if (!all.length) { const li = document.createElement('li'); li.textContent = 'لا أجهزة بعد'; li.className = 'muted'; ul.appendChild(li); return; }
+    if (!all.length && !N.pending.size) { const li = document.createElement('li'); li.textContent = 'لا أجهزة بعد'; li.className = 'muted'; ul.appendChild(li); return; }
     all.forEach(c => {
       const li = document.createElement('li');
       const dot = document.createElement('span'); dot.className = 'dot' + (N.conns.has(c.id) ? ' on' : ''); li.appendChild(dot);
@@ -29,7 +36,7 @@
       const b = document.createElement('button'); b.className = 'small'; b.textContent = c.blocked ? 'إلغاء الحظر' : 'حظر';
       b.onclick = () => N.block(c.id, !c.blocked); li.appendChild(b);
       const f = document.createElement('button'); f.className = 'small danger'; f.textContent = 'نسيان';
-      f.onclick = () => { if (confirm('نسيان هذا الجهاز؟ (الرسائل تبقى محفوظة)')) N.forget(c.id); }; li.appendChild(f);
+      f.onclick = () => { if (confirm('نسيان هذا الجهاز؟ (الرسائل تبقى محفوظة)' + (N.locked ? '\nالغرفة مقفلة: سيُعدّ جهازاً جديداً ويُرفض حتى تسمح له من هنا.' : ''))) N.forget(c.id); }; li.appendChild(f);
       ul.appendChild(li);
     });
   }

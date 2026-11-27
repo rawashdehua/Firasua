@@ -4,6 +4,8 @@
   const N = PC.net = {
     rid: null, me: null, peer: null, beacon: null, beaconTrying: false,
     conns: new Map(),      // deviceId -> {conn, id, name, last, ready, outgoing}
+    downAt: new Map(),
+    pending: new Map(),    // أجهزة رُفضت لأن الغرفة مقفلة: يمكن السماح لها
     contacts: new Map(),   // deviceId -> {key, room, id, name, lastSeen, blocked}
     dialing: new Set(), locked: false, stopped: true, serverOk: false, libOk: false, libFail: false, netDown: false, fails: 0,
     lastDisc: 0, timer: null, restartT: null
@@ -57,7 +59,7 @@
   /* ---- الدورة ---- */
   N.start = async (rid, me) => {
     N.stop();
-    N.stopped = false; N.rid = rid; N.me = me; N.lastDisc = 0;
+    N.stopped = false; N.rid = rid; N.me = me; N.lastDisc = 0; N.pending.clear(); N.downAt.clear();
     N.locked = PC.ls.get('lock_' + rid) === '1';
     N.contacts = new Map((await PC.roomContacts(rid)).map(c => [c.id, c]));
     emit('contacts');
@@ -93,7 +95,7 @@
     const wd = setTimeout(() => { if (N.peer === p && !N.serverOk && !N.stopped) { N.fails++; N.lastErr = 'timeout'; emit('status'); restartSoon(Math.min(60000, 4000 * 2 ** Math.min(N.fails - 1, 4))); } }, 12000);   // لا استجابة من الخادم
     p.on('open', () => { clearTimeout(wd); N.lastErr = ''; N.serverOk = true; N.fails = 0; emit('status'); claimBeacon(); discover(); connectKnown(); });
     p.on('connection', c => onConn(c, false));
-    p.on('call', c => { if (N.voiceIn) N.voiceIn(c); else { try { c.close(); } catch {} } });   // مكالمة صوتية مباشرة (زر التحدث)
+    p.on('call', c => { if (c.metadata && c.metadata.kind === 'call' && PC.call) PC.call.mediaIn(c); else if (N.voiceIn) N.voiceIn(c); else { try { c.close(); } catch {} } });   // مكالمة صوتية مباشرة (زر التحدث)
     p.on('disconnected', () => {
       N.serverOk = false; emit('status');
       setTimeout(() => { if (N.peer === p && !p.destroyed) { try { p.reconnect(); } catch {} } }, 2000);
@@ -149,7 +151,10 @@
   /* الأجهزة المعروفة: الجهاز ذو المعرّف الأصغر هو من يبادر، لتفادي اتصالين متقابلين */
   function connectKnown() {
     N.contacts.forEach(c => {
-      if (!c.blocked && !N.conns.has(c.id) && N.me.id < c.id) connectTo(c.id);
+      if (c.blocked || N.conns.has(c.id)) { N.downAt.delete(c.id); return; }
+      if (N.me.id < c.id) return connectTo(c.id);
+      const t = N.downAt.get(c.id);                                  // صاحب المعرّف الأكبر يبادر أيضاً إن طال الانقطاع (مثلاً بعد «نسيان» من الطرف الآخر)
+      if (t === undefined) N.downAt.set(c.id, Date.now()); else if (Date.now() - t > 15000) connectTo(c.id);
     });
   }
 
@@ -158,7 +163,7 @@
     if (!N.peer || N.peer.destroyed) return openMain();
     const now = Date.now();
     N.conns.forEach(st => {
-      if (now - st.last > 20000) { closeConn(st.conn); drop(st); }
+      if (now - st.last > 45000) { closeConn(st.conn); drop(st); }   // مهلة أطول: الآيفون يُبطئ المؤقتات في الخلفية
       else send(st, { t: 'ping' });
     });
     claimBeacon(); connectKnown();
@@ -221,6 +226,7 @@
         emit('presence'); emit('contacts'); break;
       }
       case 'read': await onRead(st, d.ids); break;
+      case 'cl': if (d.cid && String(d.cid).length <= 20) emit('cl', { id: st.id, name: st.name, k: String(d.k || ''), cid: String(d.cid), video: !!d.video, r: String(d.r || '').slice(0, 12) }); break;
       case 'ptt': emit('ptt', { id: st.id, name: st.name, on: !!d.on }); break;
       case 'typing': emit('typing', { id: st.id, name: st.name, group: !!d.g }); break;
       case 'bye': if (d.r) emit('refused', d.r); closeConn(st.conn); drop(st); break;
@@ -241,7 +247,7 @@
     }
     if (!known && N.locked) {
       send(st, { t: 'bye', r: 'locked' }); closeConn(st.conn);
-      emit('sys', 'رُفض جهاز جديد حاول الانضمام (الغرفة مقفلة): ' + cleanName(d.name), 'warn');
+      if (!N.pending.has(id)) { N.pending.set(id, { id, name: cleanName(d.name) }); emit('contacts'); emit('sys', 'رُفض جهاز لأن الغرفة مقفلة: ' + cleanName(d.name) + ' — يمكنك السماح له من الإعدادات > الأجهزة.', 'warn'); }
       return;
     }
     const old = N.conns.get(id);
@@ -409,6 +415,12 @@
     const st = N.conns.get(id);
     if (v && st) { send(st, { t: 'bye', r: 'blocked' }); closeConn(st.conn); drop(st); }
     emit('contacts');
+  };
+  N.allow = id => {                                             // السماح لجهاز رُفض بسبب قفل الغرفة
+    const p = N.pending.get(id); if (!p) return;
+    N.pending.delete(id);
+    const c = { key: N.rid + '|' + id, room: N.rid, id, name: p.name, lastSeen: Date.now(), blocked: false };
+    N.contacts.set(id, c); PC.putContact(c); emit('contacts'); connectTo(id);
   };
   N.forget = id => {
     const st = N.conns.get(id);
