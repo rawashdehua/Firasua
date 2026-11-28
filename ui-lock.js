@@ -70,12 +70,16 @@
     if (!$('inName').value.trim()) return showErr('اكتب اسماً لهذا الجهاز');
     if (!code) return showErr('أدخل كود الغرفة');
     const rid = await PC.roomIdFor(code);
-    if (S.adding) {
-      if (!/^\d{8}$/.test(code)) return showErr('كود الغرفة الجديدة يجب أن يكون 8 أرقام بالضبط');
-      if (!roomName(rid)) { if ($('selRole').value === 'create') PC.room.markHost(rid); const o = myRooms.get(); o[rid] = N.cleanName($('inRoomName').value) || ('غرفة ' + (Object.keys(o).length + 1)); myRooms.set(o); }
-    } else if (!roomName(rid)) {
-      if (++S.fails >= 5) { S.lockedUntil = Date.now() + 30000; S.fails = 0; }
-      return showErr('الكود غير مسجّل. لإنشاء غرفة بكود جديد اضغط «إضافة غرفة جديدة».');
+    if (!roomName(rid)) {
+      /* كود من 8 أرقام غير مسجّل: يُسجَّل تلقائياً (إنشاء أو انضمام دون أن يختار المستخدم شيئاً)؛
+         من دخل أولاً يصبح المضيف تلقائياً عند أول اتصال بين الجهازين */
+      if (!/^\d{8}$/.test(code)) {
+        if (++S.fails >= 5) { S.lockedUntil = Date.now() + 30000; S.fails = 0; }
+        return showErr(S.adding ? 'كود الغرفة الجديدة يجب أن يكون 8 أرقام بالضبط' : 'الكود غير صحيح. الغرف الجديدة أكوادها 8 أرقام.');
+      }
+      const o = myRooms.get(), nm = S.adding ? N.cleanName($('inRoomName').value) : '';
+      o[rid] = nm || ('غرفة ' + (Object.keys(o).length + 1)); myRooms.set(o);
+      if (!PC.ls.get('rf_' + rid)) PC.ls.set('rf_' + rid, String(Date.now()));   // وقت أول دخول: يحدد المضيف
     }
     S.fails = 0; me.name = name;
     PC.ls.set('name', name); roomStore.set(rid); PC.ls.del('noauto');

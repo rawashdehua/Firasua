@@ -31,7 +31,7 @@ PC.PEER_CFG = PC.TURN.length
    index.html?relay=https://... فيُحفظ تلقائياً، أو الصقه في الإعدادات. اتركه فارغاً لتعطيل الخادم.
    token/secret: اتركهما فارغين (تلقائي). ضعهما فقط إن ضبطت RELAY_TOKEN على الخادم، أو للدخول التلقائي AUTO_ROOM بلا كود. */
 PC.RELAY = {
-  url: '',
+  url: 'https://tawasol-relay.firas-tawasol-2027.workers.dev',
   token: '',
   secret: '',
   pollMs: 15000

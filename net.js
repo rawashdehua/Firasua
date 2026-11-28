@@ -231,6 +231,7 @@
       case 'typing': emit('typing', { id: st.id, name: st.name, group: !!d.g }); break;
       case 'bye': if (d.r) emit('refused', d.r); closeConn(st.conn); drop(st); break;
       case 'pol': emit('pol', st.id, d.p); break;
+      case 'pq': emit('pq', st.id, Number(d.ts) || 0); break;
     }
   }
 

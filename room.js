@@ -113,6 +113,7 @@
   }
 
   R.init = async () => {                                                  // إنشاء غرفة جديدة: أنا المضيف
+    if (load().hostKey) return;
     const kp = await crypto.subtle.generateKey(ALG, true, ['sign', 'verify']);
     const hk = { pub: b64u(new Uint8Array(await crypto.subtle.exportKey('raw', kp.publicKey))), priv: await crypto.subtle.exportKey('jwk', kp.privateKey) };
     PC.ls.set(kHost(), JSON.stringify(hk)); cache.hostKey = hk; cache.rid = N.rid;
@@ -122,6 +123,19 @@
   };
   R.boot = async () => { if (PC.ls.get(kMk()) === '1') { PC.ls.del(kMk()); if (!load().hostKey) await R.init(); } load(); };
   R.markHost = rid => PC.ls.set('mkhost_' + rid, '1');
+
+  /* ---- تحديد المضيف تلقائياً في الغرف المضافة: لا مضيف بعد؟ الأقدم دخولاً يصبح المضيف عند أول اتصال ----
+     (التعادل بالمعرّف). من لديه سياسة موقّعة يرسلها للجميع فيعرف الآخرون أنهم ضيوف. */
+  const myTs = () => Number(PC.ls.get('rf_' + N.rid)) || Infinity;
+  const pending = () => !PC.ROOMS[N.rid] && !!PC.ls.get('rf_' + N.rid) && !load().pol && !load().hostKey;
+  N.on('online', ({ id }) => { if (pending()) N.sendTo(id, { t: 'pq', ts: myTs() === Infinity ? 0 : myTs() }); });
+  N.on('pq', (id, ts) => {
+    if (!pending()) { sendPol(id); return; }
+    const mine = myTs(), theirs = ts > 0 ? ts : Infinity;
+    if (mine < theirs || (mine === theirs && N.me.id < id)) {
+      R.init().then(() => commit(b => { for (const x of N.conns.keys()) if (!b.members.includes(x)) b.members.push(x); })).catch(() => {});
+    }
+  });
 
   R.state = () => {
     const c = load(); let body = null; try { body = c.pol ? JSON.parse(c.pol.b) : null; } catch {}

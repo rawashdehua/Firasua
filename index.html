@@ -31,11 +31,10 @@
     <input id="inCode" type="password" inputmode="numeric" autocomplete="off" placeholder="••••••••">
     <label class="chk"><input type="checkbox" id="chkRemember" checked> تذكر هذه الغرفة على هذا الجهاز</label>
     <div id="addBox" hidden>
-      <label for="selRole">دوري في هذه الغرفة</label>
-      <select id="selRole"><option value="create">أنشئ الغرفة (أكون المضيف)</option><option value="join">أنضم لغرفة أنشأها غيري</option></select>
+      <select id="selRole" hidden><option value="join">auto</option></select>
       <label for="inRoomName">اسم الغرفة الجديدة</label>
       <input id="inRoomName" maxlength="24" autocomplete="off" placeholder="مثال: العيادة">
-      <p class="hint">اكتب كوداً من 8 أرقام (في «كود الغرفة» أعلاه). من يُدخل الكود نفسه عبر «إضافة غرفة» على جهاز آخر يتصل بك وتتزامن الرسائل بينكما.</p>
+      <p class="hint">اكتب كوداً من 8 أرقام (في «كود الغرفة» أعلاه). الطرف الآخر يكتب الكود نفسه في خانة «كود الغرفة» فقط، فينضم تلقائياً ويصبح منشئ الغرفة (المضيف) من دخلها أولاً.</p>
     </div>
     <button id="btnJoin" class="primary">اتصال</button>
     <button id="btnAddRoom" class="ghost" type="button">＋ إضافة غرفة جديدة</button>
